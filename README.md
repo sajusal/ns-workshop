@@ -2,7 +2,7 @@
 
 ## Topology
 
-[!image](topo.png)
+![image](topo.png)
 
 ## Configure Ports
 
