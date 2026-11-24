@@ -34,7 +34,7 @@ Replace IP with the correct System loopback IP of your router based on the topol
 
 Compare and commit
 
-## Verify Port and Interface status
+### Verify Port and Interface status
 
 ```bash
 show port
@@ -52,6 +52,12 @@ Replace X in IP address with your router number
 ping 192.168.X.1
 ```
 
+## Configure BFD
+
+```bash
+/configure router interface "to-core" ipv4 bfd admin-state enable
+```
+
 ## Configure ISIS
 
 ```bash
@@ -63,7 +69,7 @@ ping 192.168.X.1
 
 Compare and commit
 
-## Verify ISIS status
+### Verify ISIS status
 
 ```bash
 show router isis adjacency
@@ -71,6 +77,18 @@ show router isis adjacency
 
 ```bash
 show router isis database
+```
+
+## Enable BFD for ISIS
+
+```bash
+/configure router isis interface "to-core" bfd-liveness ipv4
+```
+
+### Verify BFD status
+
+```bash
+show router bfd session
 ```
 
 ## Configure SR-MPLS
@@ -89,7 +107,7 @@ Replace X in SID index with your router number
 
 Compare and commit
 
-## Verify SR-MPLS
+### Verify SR-MPLS
 
 ```bash
 show router tunnel-table
@@ -110,7 +128,7 @@ tools dump router segment-routing tunnel
 
 Compare and commit
 
-## Verify BGP status
+### Verify BGP status
 
 ```bash
 show router bgp summary
@@ -170,7 +188,7 @@ Example is for `admin` user.
 
 Compare and commit
 
-## Connecting to SR OS using NETCONF
+### Connecting to SR OS using NETCONF
 
 From the VM, run:
 
@@ -271,7 +289,95 @@ Before sending further RPCs, the user should respond back with a Hello.
 
 Run the previous GET config RPC to verify if the BGP neighbor has been created.
 
+### Disconnect NETCONF session
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <close-session/>
+</rpc>
+]]>]]>
+```
+
+## Enable gNMI
+
+```bash
+/configure system grpc admin-state enable
+/configure system grpc allow-unsecure-connection
+/configure system grpc gnmi admin-state enable
+/configure system grpc gnmi auto-config-save true
+/configure system security user-params local-user user "admin" access grpc true
+/configure system security aaa local-profiles profile "administrative" grpc rpc-authorization gnmi-capabilities permit
+/configure system security aaa local-profiles profile "administrative" grpc rpc-authorization gnmi-get permit
+/configure system security aaa local-profiles profile "administrative" grpc rpc-authorization gnmi-set permit
+/configure system security aaa local-profiles profile "administrative" grpc rpc-authorization gnmi-subscribe permit
+```
+
+Compare and commit (config is already pushed by Containerlab by default)
+
+### Connecting to SR OS using gNMI
+
+Install `gnmic` if not installed
+
+```bash
+bash -c "$(curl -sL https://get-gnmic.openconfig.net)"
+```
+
+Check gNMI capabilities
+
+Replace password with the correct value
+
+```bash
+gnmic -a r1 -u admin -p <password> --insecure cap
+```
+
+Check gNMI GET
+
+```bash
+gnmic -a r1 -u admin -p <password> --insecure get --path /configure/port[port-id=1/1/c1/1]
+```
+
+Check gNMI SET
+
+```bash
+gnmic -a r1 -u admin -p <password> --insecure set --update-path /configure/port[port-id=1/1/c1/1]/description --update-value "SROS workshop gNMI test"
+```
+
+Run the previous GET request to verify if the description is set.
+
+Check gNMI GET for STATE datastore
+
+```bash
+gnmic -a r1 -u admin -p <password> --insecure get --path /state/port[port-id=1/1/c1/1]/statistics
+```
+
+Check gNMI Subscribe
+
+```bash
+gnmic -a r1 -u admin -p <password> --insecure sub --stream-mode sample --sample-interval 10s --path /state/port[port-id=1/1/c1/1]/statistics/in-octets
+```
+
+Check gNMI Subscribe ON-CHANGE
+
+```bash
+gnmic -a r1 -u admin -p <password> --insecure sub --stream-mode on-change --path /state/router[router-name=Base]/bgp/neighbor[ip-address=100.100.100.100]/statistics/session-state
+```
+
+This request is monitoring the BGP neighbor state. Login to the router and shutdown the BGP neighbor
+
+```bash
+/configure router bgp neighbor "100.100.100.100" admin-state disable
+```
+
+Commit
+
+Verify gNMI messages.
+
+Enable the neighbor and verify the gNMI messages.
 
 
+```bash
+/configure router bgp neighbor "100.100.100.100" admin-state enable
+```
 
-
+Commit
