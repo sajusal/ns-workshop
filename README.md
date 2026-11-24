@@ -73,6 +73,55 @@ show router isis adjacency
 show router isis database
 ```
 
+## Configure SR-MPLS
+
+Replace X in SID index with your router number
+
+```bash
+/configure router "Base" mpls-labels sr-labels start 21000
+/configure router "Base" mpls-labels sr-labels end 22000
+/configure router "Base" isis 0 advertise-router-capability as
+/configure router "Base" isis 0 traffic-engineering true
+/configure router "Base" isis 0 segment-routing admin-state enable
+/configure router "Base" isis 0 segment-routing prefix-sid-range global
+/configure router "Base" isis 0 interface "system" ipv4-node-sid index X
+```
+
+## Verify SR-MPLS
+
+```bash
+show router tunnel-table
+```
+
+```bash
+tools dump router segment-routing tunnel
+```
+
+## Configure BGP
+
+```bash
+/configure router "Base" autonomous-system 64500
+/configure router "Base" bgp group "edge" type internal
+/configure router "Base" bgp group "edge" peer-as 64500
+/configure router "Base" bgp neighbor "100.100.100.100" group "edge"
+```
+
+## Verify BGP status
+
+```bash
+show router bgp summary
+```
+
+```bash
+show router bgp neighbor "100.100.100.100" advertised-routes ipv4
+```
+
+```bash
+show router route-table
+```
+
+
+
 
 
 
