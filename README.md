@@ -87,6 +87,8 @@ Replace X in SID index with your router number
 /configure router "Base" isis 0 interface "system" ipv4-node-sid index X
 ```
 
+Compare and commit
+
 ## Verify SR-MPLS
 
 ```bash
@@ -106,6 +108,8 @@ tools dump router segment-routing tunnel
 /configure router "Base" bgp neighbor "100.100.100.100" group "edge"
 ```
 
+Compare and commit
+
 ## Verify BGP status
 
 ```bash
@@ -120,6 +124,152 @@ show router bgp neighbor "100.100.100.100" advertised-routes ipv4
 show router route-table
 ```
 
+## Enable NETCONF
+
+Enable NETCONF listen mode. Default port is 830.
+
+Enable config auto save when commit is done via NETCONF
+
+```bash
+/configure system management-interface netconf auto-config-save true
+/configure system management-interface netconf listen admin-state enable
+/configure system management-interface netconf listen port 830
+```
+
+Enable NETCONF RPCs under user profile:
+
+Example is for `administrative` profile which is default.
+
+```bash
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization action true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization cancel-commit true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization close-session true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization commit true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization copy-config true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization create-subscription true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization delete-config true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization discard-changes true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization edit-config true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-config true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-data true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-schema true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization kill-session true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization lock true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization validate true
+```
+
+Assign profile to user and enable NETCONF access for user.
+
+Example is for `admin` user.
+
+```bash
+/configure system security user-params local-user user "admin" access netconf true
+/configure system security user-params local-user user "admin" console member ["administrative"]
+```
+
+Compare and commit
+
+## Connecting to SR OS using NETCONF
+
+From the VM, run:
+
+```xml
+ssh -p 830 admin@<router-name> -s netconf
+```
+
+Upon receiving this request, SR OS will respond with list of capabilities in a Hello RPC.
+
+Before sending further RPCs, the user should respond back with a Hello.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+<capabilities>
+<capability>urn:ietf:params:netconf:base:1.0</capability>
+</capabilities>
+</hello>
+]]>]]>
+```
+
+### Verify current running version
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <get>
+    <filter type="subtree">
+      <state xmlns="urn:nokia.com:sros:ns:yang:sr:state">
+        <system>
+          <version>
+            <version-string/>
+          </version>
+        </system>
+      </state>
+    </filter>
+  </get>
+</rpc>
+]]>]]>
+```
+
+### Verify BGP config using GET:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+<get-config>
+  <source>
+    <candidate/>
+  </source>
+  <filter>
+    <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf">
+      <router>
+        <bgp/>
+      </router>
+    </configure>
+  </filter>
+</get-config>
+</rpc>
+]]>]]>
+```
+
+### Add a new BGP neighbor
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="0" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" xmlns:yang="urn:ietf:params:xml:ns:yang:1">
+    <edit-config>
+        <target><candidate/></target>
+        <config>
+            <configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf" xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" xmlns:nokia-attr="urn:nokia.com:sros:ns:yang:sr:attributes">
+                <router>
+                    <router-name>Base</router-name>
+                    <bgp>
+                        <neighbor>
+                            <ip-address>55.55.55.55</ip-address>
+                            <group>edge</group>
+                        </neighbor>
+                    </bgp>
+                </router>
+            </configure>
+        </config>
+    </edit-config>
+</rpc>
+]]>]]>
+```
+
+### Commit via NETCONF
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <commit> 
+  </commit>
+</rpc>
+]]>]]>
+```
+
+Run the previous GET config RPC to verify if the BGP neighbor has been created.
 
 
 
