@@ -142,6 +142,47 @@ show router bgp neighbor "100.100.100.100" advertised-routes ipv4
 show router route-table
 ```
 
+## Configure BGP Policies
+
+Create a loopback and advertise it in BGP.
+
+Replace X in loopback IP with your router number.
+
+```bash
+/configure router "Base" interface "my-loopback" ipv4 primary address 22.X.22.X prefix-length 32
+/configure router "Base" interface "my-loopback" loopback
+
+/configure { policy-options community "COM-TR" member "65535:100" }
+/configure { policy-options prefix-list "loopbacks" prefix 22.X.22.X/32 type exact }
+
+/configure policy-options policy-statement "policy-tr" entry-type named
+/configure { policy-options policy-statement "policy-tr" insert named-entry "CUST A" beginning }
+/configure policy-options policy-statement "policy-tr" named-entry "CUST A" from prefix-list ["loopbacks"]
+/configure policy-options policy-statement "policy-tr" named-entry "CUST A" from protocol name [direct]
+/configure policy-options policy-statement "policy-tr" named-entry "CUST A" action action-type accept
+/configure policy-options policy-statement "policy-tr" named-entry "CUST A" action community add ["COM-TR"]
+
+/configure router "Base" bgp neighbor "100.100.100.100" export policy ["policy-tr"]
+```
+
+### Verify BGP Policy
+
+The policy is applied to export the loopback IP to the Core device.
+
+Check the list of advertised routes to the Core neighbor.
+
+```bash
+show router bgp neighbor "100.100.100.100" advertised-routes
+```
+
+Check the RIB-OUT to see the detailed of the advertised route and make sure the community value is added.
+
+Replace X in the IP with your router number.
+
+```bash
+show router bgp routes 22.X.22.X ipv4 hunt
+```
+
 ## Enable NETCONF
 
 Enable NETCONF listen mode. Default port is 830.
