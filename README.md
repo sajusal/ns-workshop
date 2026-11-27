@@ -4,6 +4,25 @@
 
 ![image](topo.png)
 
+## MD-CLI Command Reference
+
+Below is a reference table with some commonly used commands for CLI navigation.
+
+| Action | Command |
+| --- | --- |
+| Enter candidate mode | `configure private` |
+| Commit configuration changes | `commit` |
+| Delete configuration elements | `delete {command path}` |
+| Discard configuration changes | `discard` |
+| Compare candidate to running | `compare /` |
+| View configuration in current context | `info` |
+| View configuration in flat format | `info full-context` |
+| View full configuration of router | `admin show config` |
+| Search for keyword in output | `<command> \| match {keyword}` |
+| Find a command | `tree flat detail \| match <keyword>` |
+| Exit candidate mode | `exit` |
+| Exit from router | `logout` |
+
 ## Configure Ports
 
 ```bash
